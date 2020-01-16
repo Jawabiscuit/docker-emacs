@@ -58,6 +58,21 @@ ENV UNAME="emacser" \
     WORKSPACE="/mnt/workspace" \
     SHELL="/bin/bash"
 
+# fonts
+RUN mkdir -p /home/emacs/.fonts
+COPY fonts/all-the-icons.ttf /home/emacs/.fonts
+COPY fonts/all-the-icons-project.json /home/emacs/.fonts
+COPY fonts/file-icons.ttf /home/emacs/.fonts
+COPY fonts/fontawesome.ttf /home/emacs/.fonts
+COPY fonts/material-design-icons.ttf /home/emacs/.fonts
+COPY fonts/octicons.ttf /home/emacs/.fonts
+COPY fonts/weathericons.ttf /home/emacs/.fonts
+RUN fc-cache -fv
+
+# Git config
+RUN git config --global user.email jawabiscuit@users.noreply.github.com\
+  && git config --global user.name "Jonas Avrin"
+
 WORKDIR "${WORKSPACE}"
 
 ENTRYPOINT ["asEnvUser"]
