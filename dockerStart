@@ -1,0 +1,11 @@
+#! /bin/bash
+
+# User pip executables
+export PATH="${UHOME}/.local/bin:${PATH}"
+
+# Create workspace
+mkdir -p "${WORKSPACE}"
+chown "${UID}":"${GID}" "${WORKSPACE}"
+cd "${WORKSPACE}"
+
+su-exec "${UNAME}" "$@"

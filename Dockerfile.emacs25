@@ -10,7 +10,7 @@ ENV DEBIAN_FRONTEND noninteractive
 
 # basic stuff
 RUN echo 'APT::Get::Assume-Yes "true";' >> /etc/apt/apt.conf \
-    && apt-get update && apt-get install \
+    && apt-get update && apt-get install -y \
     bash \
     build-essential \
     dbus-x11 \
@@ -23,6 +23,8 @@ RUN echo 'APT::Get::Assume-Yes "true";' >> /etc/apt/apt.conf \
     sudo \
     tar \
     unzip \
+    hunspell \
+    stow \
 # su-exec
     && git clone https://github.com/ncopa/su-exec.git /tmp/su-exec \
     && cd /tmp/su-exec \
@@ -43,12 +45,19 @@ RUN chown root /usr/local/sbin/asEnvUser \
 # ^^^^^^^ Those layers are shared ^^^^^^^
 
 # Emacs
-RUN apt-get update && apt-get install software-properties-common \
-  && apt-add-repository ppa:kelleyk/emacs \
-  && apt-get update && apt-get install emacs25 \
+RUN apt-get update && apt-get install -y software-properties-common \
+    && apt-add-repository ppa:kelleyk/emacs \
+    && apt-get update && apt-get install -y emacs25 \
+# Python 2.7
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y \
+    python2.7 \
+    virtualenv \
+    virtualenvwrapper \
+    python-pip \
 # Cleanup
-  && apt-get purge software-properties-common \
-  && rm -rf /tmp/* /var/lib/apt/lists/* /root/.cache/*
+    && apt-get purge software-properties-common \
+    && rm -rf /tmp/* /var/lib/apt/lists/* /root/.cache/*
 
 ENV UNAME="emacser" \
     GNAME="emacs" \
@@ -58,8 +67,22 @@ ENV UNAME="emacser" \
     WORKSPACE="/mnt/workspace" \
     SHELL="/bin/bash"
 
-# fonts
-RUN mkdir -p /home/emacs/.fonts
+RUN asEnvUser
+
+# Python
+RUN echo "source /usr/share/virtualenvwrapper/virtualenvwrapper.sh" >> /home/emacs/.bashrc \
+    && pip completion --bash >> /home/emacs/.bashrc \
+    && echo "export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python2.7" >> /home/emacs/.bashrc \
+    && export WORKON_HOME=/home/emacs/.virtualenvs \
+    && echo "export WORKON_HOME=$WORKON_HOME" >> /home/emacs/.bashrc \
+    && echo "export PIP_VIRTUALENV_BASE=$WORKON_HOME" >> /home/emacs/.bashrc \
+    && export PROJECT_HOME="${WORKSPACE}" \
+    && echo "export PROJECT_HOME=$PROJECT_HOME" >> /home/emacs/.bashrc \
+    && su-exec ${UNAME} pip install --user virtualenvwrapper \
+    && su-exec ${UNAME} pip install --user cookiecutter
+
+# Fonts
+RUN mkdir /home/emacs/.fonts
 COPY fonts/all-the-icons.ttf /home/emacs/.fonts
 COPY fonts/all-the-icons-project.json /home/emacs/.fonts
 COPY fonts/file-icons.ttf /home/emacs/.fonts
@@ -69,11 +92,10 @@ COPY fonts/octicons.ttf /home/emacs/.fonts
 COPY fonts/weathericons.ttf /home/emacs/.fonts
 RUN fc-cache -fv
 
-# Git config
-RUN git config --global user.email jawabiscuit@users.noreply.github.com\
-  && git config --global user.name "Jonas Avrin"
-
 WORKDIR "${WORKSPACE}"
 
-ENTRYPOINT ["asEnvUser"]
+COPY dockerStart /usr/local/sbin/
+
+# ENTRYPOINT ["asEnvUser"]
+ENTRYPOINT ["dockerStart"]
 CMD ["bash", "-c", "emacs; /bin/bash"]
