@@ -10,7 +10,7 @@ ENV DEBIAN_FRONTEND noninteractive
 
 # basic stuff
 RUN echo 'APT::Get::Assume-Yes "true";' >> /etc/apt/apt.conf \
-    && apt-get update && apt-get install -y \
+    && apt-get update && apt-get install \
     bash \
     build-essential \
     dbus-x11 \
@@ -37,20 +37,21 @@ RUN echo 'APT::Get::Assume-Yes "true";' >> /etc/apt/apt.conf \
     && rm -rf /tmp/* /var/lib/apt/lists/* /root/.cache/*
 
 COPY asEnvUser /usr/local/sbin/
+COPY dockerStart /usr/local/sbin/
 
-# Only for sudoers
 RUN chown root /usr/local/sbin/asEnvUser \
-    && chmod 700  /usr/local/sbin/asEnvUser
+    && chmod 700  /usr/local/sbin/asEnvUser \
+    && chmod 755  /usr/local/sbin/dockerStart
 
 # ^^^^^^^ Those layers are shared ^^^^^^^
 
 # Emacs
-RUN apt-get update && apt-get install -y software-properties-common \
+RUN apt-get update && apt-get install software-properties-common \
     && apt-add-repository ppa:kelleyk/emacs \
-    && apt-get update && apt-get install -y emacs25 \
+    && apt-get update && apt-get install emacs25 \
 # Python 2.7
     && add-apt-repository ppa:deadsnakes/ppa \
-    && apt-get update && apt-get install -y \
+    && apt-get update && apt-get install \
     python2.7 \
     virtualenv \
     virtualenvwrapper \
@@ -70,32 +71,34 @@ ENV UNAME="emacser" \
 RUN asEnvUser
 
 # Python
-RUN echo "source /usr/share/virtualenvwrapper/virtualenvwrapper.sh" >> /home/emacs/.bashrc \
-    && pip completion --bash >> /home/emacs/.bashrc \
-    && echo "export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python2.7" >> /home/emacs/.bashrc \
-    && export WORKON_HOME=/home/emacs/.virtualenvs \
-    && echo "export WORKON_HOME=$WORKON_HOME" >> /home/emacs/.bashrc \
-    && echo "export PIP_VIRTUALENV_BASE=$WORKON_HOME" >> /home/emacs/.bashrc \
+COPY requirements.txt ${UHOME}
+
+RUN echo "source /usr/share/virtualenvwrapper/virtualenvwrapper.sh" >> ${UHOME}/.bashrc \
+    && pip completion --bash >> ${UHOME}/.bashrc \
+    && echo "export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python2.7" >> ${UHOME}/.bashrc \
+    && export WORKON_HOME=${UHOME}/.virtualenvs \
+    && echo "export WORKON_HOME=$WORKON_HOME" >> ${UHOME}/.bashrc \
+    && echo "export PIP_VIRTUALENV_BASE=$WORKON_HOME" >> ${UHOME}/.bashrc \
     && export PROJECT_HOME="${WORKSPACE}" \
-    && echo "export PROJECT_HOME=$PROJECT_HOME" >> /home/emacs/.bashrc \
+    && echo "export PROJECT_HOME=$PROJECT_HOME" >> ${UHOME}/.bashrc \
+    && chown ${UID}:${GID} ${UHOME}/.bashrc \
+    && chmod 664 ${UHOME}/.bashrc \
+    && pip install -r ${UHOME}/requirements.txt \
     && su-exec ${UNAME} pip install --user virtualenvwrapper \
     && su-exec ${UNAME} pip install --user cookiecutter
 
 # Fonts
-RUN mkdir /home/emacs/.fonts
-COPY fonts/all-the-icons.ttf /home/emacs/.fonts
-COPY fonts/all-the-icons-project.json /home/emacs/.fonts
-COPY fonts/file-icons.ttf /home/emacs/.fonts
-COPY fonts/fontawesome.ttf /home/emacs/.fonts
-COPY fonts/material-design-icons.ttf /home/emacs/.fonts
-COPY fonts/octicons.ttf /home/emacs/.fonts
-COPY fonts/weathericons.ttf /home/emacs/.fonts
+RUN mkdir ${UHOME}/.fonts
+COPY fonts/all-the-icons.ttf ${UHOME}/.fonts
+COPY fonts/all-the-icons-project.json ${UHOME}/.fonts
+COPY fonts/file-icons.ttf ${UHOME}/.fonts
+COPY fonts/fontawesome.ttf ${UHOME}/.fonts
+COPY fonts/material-design-icons.ttf ${UHOME}/.fonts
+COPY fonts/octicons.ttf ${UHOME}/.fonts
+COPY fonts/weathericons.ttf ${UHOME}/.fonts
 RUN fc-cache -fv
 
 WORKDIR "${WORKSPACE}"
 
-COPY dockerStart /usr/local/sbin/
-
-# ENTRYPOINT ["asEnvUser"]
 ENTRYPOINT ["dockerStart"]
 CMD ["bash", "-c", "emacs; /bin/bash"]

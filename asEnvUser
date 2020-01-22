@@ -44,14 +44,3 @@ else
 	mkdir -p "${UHOME}"
 	chown "${UID}":"${GID}" "${UHOME}"
 fi
-
-# su-exec ${UNAME} pip install --user virtualenvwrapper
-# su-exec ${UNAME} pip install --user cookiecutter
-# export PATH="${UHOME}/.local/bin:${PATH}"
-
-# mkdir -p "${WORKSPACE}"
-# chown "${UID}":"${GID}" "${WORKSPACE}"
-# cd "${WORKSPACE}"
-
-# su-exec "${UNAME}" "$@"
-
